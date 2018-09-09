@@ -22,6 +22,9 @@ const server = http.createServer((req, res) => {
         .pathname
         .replace(/^\/+|\/+$/g, '');
 
+    // Get the query string as na object
+    const queryStringObject = parsedUrl.query;
+
     // Get the HTTP Method
     const method = req.method
         .toUpperCase();
@@ -30,7 +33,8 @@ const server = http.createServer((req, res) => {
     res.end('Hello World!\n');
 
     // Log the request
-    console.log(`${requestTime.toISOString()} Request received: ${method} ${path}`);
+    console.log(`${requestTime.toISOString()} Request received: ${method} ${path}
+    Query string parameters:`, queryStringObject);
 });
 
 // Start the server, and have it listen to port 3000.
