@@ -8,22 +8,32 @@
 
 
 // Dependencies
-var fs = require('fs');
+const fs = require('fs');
 
 // App object
-var jokes = {};
+const jokes = {};
+
+let arrayOfJokes = null;
 
 // Get all the jokes and return them to the user
-jokes.allJokes = function(){
+jokes.allJokes = function (callback) {
 
-    // Read the text file containing the jokes
-    var fileContents = fs.readFileSync(__dirname+'/jokes.txt', 'utf8');
+    if (arrayOfJokes) {
+        callback(null, arrayOfJokes);
+    } else {
+        // Read the text file containing the jokes
+        fs.readFile(__dirname + '/jokes.txt', 'utf8', (err, fileContents) => {
+            if (err) {
+                callback(err);
+            } else {
+                arrayOfJokes = fileContents.split(/\r?\n/);
+                callback(null, arrayOfJokes);
+            }
+        });
 
-    // Turn the string into an array 
-    var arrayOfJokes = fileContents.split(/\r?\n/);
 
-    // Return the array
-    return arrayOfJokes;
+    }
+
 
 };
 
