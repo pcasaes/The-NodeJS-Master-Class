@@ -57,7 +57,7 @@ const server = http.createServer((req, res) => {
 
         // Router the request to the handler specified in the router
         chosenHandler(data, (err, statusCode, responsePayload) => {
-            res.setHeader('content-type', 'application/json');
+            res.setHeader('Content-Type', 'application/json');
             if (err) {
                 res.writeHead(500);
                 res.end(err.message);
