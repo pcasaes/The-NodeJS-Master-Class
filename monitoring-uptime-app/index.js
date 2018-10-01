@@ -6,10 +6,10 @@
 // Dependencies
 const http = require('http');
 const https = require('https');
-const fs = require('fs');
 const url = require('url');
 const StringDecoder = require('string_decoder').StringDecoder;
 const config = require('./config');
+const simplerx = require('./simplerx');
 
 // Instantiate the HTTP server
 const httpServer = http.createServer((req, res) => unifiedServer(req, res));
@@ -19,23 +19,39 @@ httpServer.listen(config.httpPort, () => {
     console.log(`The http server is listening on port ${config.httpPort} in ${config.envName} mode.`);
 });
 
-
 // Instantiate the HTTPS server
-if (fs.existsSync('./https/key.pem') && fs.existsSync('./https/cert.pem')) {
-    const httpsServerOptions = {
-        'key': fs.readFileSync('./https/key.pem'),
-        'cert': fs.readFileSync('./https/cert.pem')
-    };
+simplerx.Observable
+    .fs.exists('./https/key.pem')
+    .zip(simplerx.Observable.fs.exists('./https/cert.pem'), (v1, v2) => v1 && v2)
+    .error(err => {
+        throw err;
+    })
+    .subscribe((v) => {
+        if (v) {
+            simplerx.Observable.fs.readFile('./https/key.pem')
+                .zip(simplerx.Observable.fs.readFile('./https/cert.pem'), (key, cert) => {
+                    return {
+                        'key': key,
+                        'cert': cert
+                    };
+                })
+                .error(err => {
+                    throw err;
+                })
+                .subscribe((httpsServerOptions) => {
 
-    const httpsServer = https.createServer(httpsServerOptions, (req, res) => unifiedServer(req, res));
+                    const httpsServer = https.createServer(httpsServerOptions, (req, res) => unifiedServer(req, res));
 
 // Start the https server, and have it listen to port ${config.httpsPort}.
-    httpsServer.listen(config.httpsPort, () => {
-        console.log(`The https server is listening on port ${config.httpsPort} in ${config.envName} mode.`);
+                    httpsServer.listen(config.httpsPort, () => {
+                        console.log(`The https server is listening on port ${config.httpsPort} in ${config.envName} mode.`);
+                    });
+                });
+
+        } else {
+            console.warn('To enable https key and cert files must exists in folder ./https. Please check README.md');
+        }
     });
-} else {
-    console.warn('To enable https key and cert files must exists in folder ./https. Please check README.md');
-}
 
 
 // server logic
