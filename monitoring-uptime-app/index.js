@@ -5,13 +5,42 @@
 
 // Dependencies
 const http = require('http');
+const https = require('https');
+const fs = require('fs');
 const url = require('url');
 const StringDecoder = require('string_decoder').StringDecoder;
 const config = require('./config');
 
+// Instantiate the HTTP server
+const httpServer = http.createServer((req, res) => unifiedServer(req, res));
 
+// Start the http server, and have it listen to port ${config.httpPort}.
+httpServer.listen(config.httpPort, () => {
+    console.log(`The http server is listening on port ${config.httpPort} in ${config.envName} mode.`);
+});
+
+
+// Instantiate the HTTPS server
+if (fs.existsSync('./https/key.pem') && fs.existsSync('./https/cert.pem')) {
+    const httpsServerOptions = {
+        'key': fs.readFileSync('./https/key.pem'),
+        'cert': fs.readFileSync('./https/cert.pem')
+    };
+
+    const httpsServer = https.createServer(httpsServerOptions, (req, res) => unifiedServer(req, res));
+
+// Start the https server, and have it listen to port ${config.httpsPort}.
+    httpsServer.listen(config.httpsPort, () => {
+        console.log(`The https server is listening on port ${config.httpsPort} in ${config.envName} mode.`);
+    });
+} else {
+    console.warn('To enable https key and cert files must exists in folder ./https. Please check README.md');
+}
+
+
+// server logic
 // The server should respond to all requests with a string.
-const server = http.createServer((req, res) => {
+const unifiedServer = (req, res) => {
     // Get request time
     const requestTime = new Date();
 
@@ -91,12 +120,7 @@ const server = http.createServer((req, res) => {
 
     });
 
-});
-
-// Start the server, and have it listen to port ${config.port}.
-server.listen(config.port, () => {
-    console.log(`The server is listening on port ${config.port} in ${config.envName} mode.`);
-});
+};
 
 // Define the handlers
 const handlers = {};
