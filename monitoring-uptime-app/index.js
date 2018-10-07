@@ -9,49 +9,54 @@ const https = require('https');
 const url = require('url');
 const StringDecoder = require('string_decoder').StringDecoder;
 const config = require('./config');
-const simplerx = require('./simplerx');
+const fsp = require('fs').promises;
 
 // Instantiate the HTTP server
-const httpServer = http.createServer((req, res) => unifiedServer(req, res));
+function startHttpServer() {
+    const httpServer = http.createServer((req, res) => unifiedServer(req, res));
 
 // Start the http server, and have it listen to port ${config.httpPort}.
-httpServer.listen(config.httpPort, () => {
-    console.log(`The http server is listening on port ${config.httpPort} in ${config.envName} mode.`);
-});
+    httpServer.listen(config.httpPort, () => {
+        console.log(`The http server is listening on port ${config.httpPort} in ${config.envName} mode.`);
+    });
+}
 
 // Instantiate the HTTPS server
-simplerx.Observable
-    .fs.exists('./https/key.pem')
-    .zip(simplerx.Observable.fs.exists('./https/cert.pem'), (v1, v2) => v1 && v2)
-    .error(err => {
-        throw err;
-    })
-    .subscribe((v) => {
-        if (v) {
-            simplerx.Observable.fs.readFile('./https/key.pem')
-                .zip(simplerx.Observable.fs.readFile('./https/cert.pem'), (key, cert) => {
-                    return {
-                        'key': key,
-                        'cert': cert
-                    };
-                })
-                .error(err => {
-                    throw err;
-                })
-                .subscribe((httpsServerOptions) => {
+async function startHttpsServer() {
 
-                    const httpsServer = https.createServer(httpsServerOptions, (req, res) => unifiedServer(req, res));
+
+    try {
+        const files = await Promise.all([
+            fsp.open('./https/key.pem', 'r'),
+            fsp.open('./https/cert.pem', 'r')
+        ]);
+
+        const content = await Promise.all([
+            files[0].readFile({'encoding': 'utf8'}),
+            files[1].readFile({'encoding': 'utf8'})
+        ]);
+
+
+        const httpsServerOptions = {
+            'key': content[0],
+            'cert': content[1]
+        };
+
+        const httpsServer = https.createServer(httpsServerOptions, (req, res) => unifiedServer(req, res));
 
 // Start the https server, and have it listen to port ${config.httpsPort}.
-                    httpsServer.listen(config.httpsPort, () => {
-                        console.log(`The https server is listening on port ${config.httpsPort} in ${config.envName} mode.`);
-                    });
-                });
+        httpsServer.listen(config.httpsPort, () => {
+            console.log(`The https server is listening on port ${config.httpsPort} in ${config.envName} mode.`);
+        });
+    } catch (ex) {
+        console.warn('To enable https key and cert files must exists in folder ./https. Please check README.md');
 
-        } else {
-            console.warn('To enable https key and cert files must exists in folder ./https. Please check README.md');
-        }
-    });
+    }
+}
+
+
+startHttpServer();
+startHttpsServer();
 
 
 // server logic
