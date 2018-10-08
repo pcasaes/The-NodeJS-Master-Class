@@ -21,19 +21,23 @@ function startHttpServer() {
     });
 }
 
-// Instantiate the HTTPS server
+async function readFile(filePath) {
+    const file = await fsp.open(filePath, 'r');
+    return file.readFile({'encoding': 'utf8'});
+}
+
+/**
+ * Instantiate the HTTPS server
+ *
+ * @returns {void}
+ */
 async function startHttpsServer() {
 
 
     try {
-        const files = await Promise.all([
-            fsp.open('./https/key.pem', 'r'),
-            fsp.open('./https/cert.pem', 'r')
-        ]);
-
         const content = await Promise.all([
-            files[0].readFile({'encoding': 'utf8'}),
-            files[1].readFile({'encoding': 'utf8'})
+            readFile('./https/key.pem'),
+            readFile('./https/cert.pem')
         ]);
 
 
