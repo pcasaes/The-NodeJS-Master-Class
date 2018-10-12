@@ -9,3 +9,4 @@ ehthumbs.db
 Thumbs.db
 .idea/
 monitoring-uptime-app/https/*.pem
+monitoring-uptime-app/.data/
