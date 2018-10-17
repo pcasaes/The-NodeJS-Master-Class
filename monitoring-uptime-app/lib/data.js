@@ -40,19 +40,15 @@ function writeFile(fd, stringData, callback) {
 lib.create = (dir, file, data, callback) => {
     // Open the file for writing
     fs.mkdir(`${lib.baseDir}${dir}`, (mkdirErr) => {
-        if (!mkdirErr) {
-            fs.open(toPath(dir, file), 'wx', (err, fd) => {
-                if (!err && fd) {
-                    // Convert data to string
-                    const stringData = JSON.stringify(data);
-                    writeFile(fd, stringData, callback);
-                } else {
-                    callback(`Could not create new file, it may already exist ${dir}/${file}`);
-                }
-            });
-        } else {
-            callback(`Could not create dir ${dir}`);
-        }
+        fs.open(toPath(dir, file), 'wx', (err, fd) => {
+            if (!err && fd) {
+                // Convert data to string
+                const stringData = JSON.stringify(data);
+                writeFile(fd, stringData, callback);
+            } else {
+                callback(`Could not create new file, it may already exist ${dir}/${file}`);
+            }
+        });
     });
 };
 
@@ -89,6 +85,78 @@ lib.delete = (dir, file, callback) => {
         } else {
             callback('Error deleting file');
         }
+    });
+};
+
+lib.exists = (dir, file, callback) => {
+    fs.stat(toPath(dir, file), (err, stat) => {
+        if (!err) {
+            callback(null, stat.isFile());
+        } else {
+            callback(null, false);
+        }
+    });
+};
+
+lib.promise = {};
+
+lib.promise.create = async (dir, file, data) => {
+    return new Promise((resolve, reject) => {
+        lib.create(dir, file, data, (err) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve();
+            }
+        });
+    });
+};
+
+lib.promise.exists = async (dir, file) => {
+    return new Promise((resolve, reject) => {
+        lib.exists(dir, file, (err, r) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(r);
+            }
+        });
+    });
+};
+
+lib.promise.read = async (dir, file) => {
+    return new Promise((resolve, reject) => {
+        lib.read(dir, file, (err, r) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve(r);
+            }
+        });
+    });
+};
+
+lib.promise.delete = async (dir, file) => {
+    return new Promise((resolve, reject) => {
+        lib.delete(dir, file, (err) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve();
+            }
+        });
+    });
+};
+
+lib.promise.update = async (dir, file, data) => {
+    return new Promise((resolve, reject) => {
+        lib.update(dir, file, data, (err) => {
+            if (err) {
+                reject(err);
+            } else {
+                resolve();
+            }
+        });
     });
 };
 
