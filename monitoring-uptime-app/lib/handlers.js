@@ -37,7 +37,7 @@ const handlers = {};
 
 const users = {
     GET: async (data) => {
-        const phone = extractPhoneString(data.queryStringObject.phone);
+        const phone = extractPhoneString(data.pathParam[1]);
         if (phone) {
             try {
                 const u = await _data.promise.read('users', phone);
@@ -108,7 +108,7 @@ const users = {
     },
 
     PUT: async (data) => {
-        const phone = extractPhoneString(data.queryStringObject.phone);
+        const phone = extractPhoneString(data.pathParam[1]);
         if (phone) {
             const payload = data.payload;
             const firstName = extractNonEmptyString(payload.firstName);
@@ -143,7 +143,7 @@ const users = {
     },
 
     DELETE: async (data) => {
-        const phone = extractPhoneString(data.queryStringObject.phone);
+        const phone = extractPhoneString(data.pathParam[1]);
         if (phone) {
             try {
                 await _data.promise.delete('users', phone);

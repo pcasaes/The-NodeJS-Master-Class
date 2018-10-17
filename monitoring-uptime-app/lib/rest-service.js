@@ -98,12 +98,26 @@ restService.RestService = class RestService {
             buffer += decoder.end();
 
             // Choose the handler this request should go to. If one is not found, use the not found handler
-            const chosenHandler = typeof(this.router[path]) !== 'undefined' ? this.router[path] : this.notFound;
+            let chosenHandler = typeof(this.router[path]) !== 'undefined' ? this.router[path] : this.notFound;
+            let pathParam = [];
+
+            if (chosenHandler === this.notFound) {
+                const keys = Object.keys(this.router);
+                for (let i = 0; i < keys.length; i++) {
+                    const m = path.match(new RegExp(keys[i]));
+                    if (!!m) {
+                        chosenHandler = this.router[keys[i]];
+                        pathParam = m.slice(1);
+                        break;
+                    }
+                }
+            }
 
             // Construct the data object to send to the handler
             const data = {
                 'path': path,
                 'queryStringObject': queryStringObject,
+                'pathParam': pathParam,
                 'method': method,
                 'headers': headers,
                 'payload': buffer ? parseRequest(headers, method, buffer): null
