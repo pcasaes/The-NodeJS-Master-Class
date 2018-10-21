@@ -14,7 +14,8 @@ const rest = require('./lib/rest-service');
 
 // Define a request router
 const router = {
-    '^users(/(\\d{10}))?$': handlers.users,
+    'users': handlers.users,
+    'users/{phone}': handlers.users,
 };
 
 

@@ -37,7 +37,7 @@ const handlers = {};
 
 const users = {
     GET: async (data) => {
-        const phone = extractPhoneString(data.pathParam[1]);
+        const phone = extractPhoneString(data.pathParams.phone);
         if (phone) {
             try {
                 const u = await _data.promise.read('users', phone);
@@ -108,7 +108,7 @@ const users = {
     },
 
     PUT: async (data) => {
-        const phone = extractPhoneString(data.pathParam[1]);
+        const phone = extractPhoneString(data.pathParams.phone);
         if (phone) {
             const payload = data.payload;
             const firstName = extractNonEmptyString(payload.firstName);
@@ -143,7 +143,7 @@ const users = {
     },
 
     DELETE: async (data) => {
-        const phone = extractPhoneString(data.pathParam[1]);
+        const phone = extractPhoneString(data.pathParams.phone);
         if (phone) {
             try {
                 await _data.promise.delete('users', phone);
@@ -166,8 +166,8 @@ handlers.users = new Handler(Object.keys(users), async (data) => {
 });
 
 // Not found handler
-handlers.notFound = new Handler([], (data, callback) => {
-    callback(404);
+handlers.notFound = new Handler([], async (data) => {
+    throw new _responses.ErrorResponse(404, 'Not found');
 });
 
 module.exports = handlers;

@@ -47,7 +47,8 @@ function parseRequest(headers, method, buffer) {
         try {
             return JSON.parse(buffer);
         } catch (e) {
-            throw new ErrorResponse(400, e);x
+            throw new ErrorResponse(400, e);
+            x
         }
     }
     return buffer;
@@ -69,7 +70,6 @@ restService.RestService = class RestService {
 
         // Get the URL and parse it.
         const parsedUrl = url.parse(req.url, true);
-
 
 
         // Get the path
@@ -99,17 +99,34 @@ restService.RestService = class RestService {
 
             // Choose the handler this request should go to. If one is not found, use the not found handler
             let chosenHandler = typeof(this.router[path]) !== 'undefined' ? this.router[path] : this.notFound;
-            let pathParam = [];
+            let pathParams = {};
 
             if (chosenHandler === this.notFound) {
                 const keys = Object.keys(this.router);
+                const parts = path.split('/');
                 for (let i = 0; i < keys.length; i++) {
-                    const m = path.match(new RegExp(keys[i]));
-                    if (!!m) {
-                        chosenHandler = this.router[keys[i]];
-                        pathParam = m.slice(1);
-                        break;
+                    const ps = keys[i].split('/');
+                    let found = ps.length > 0;
+                    if (ps.length === parts.length) {
+                        for (let p = 0; p < parts.length; p++) {
+                            if (ps[p].indexOf('{') === 0 && ps[p].indexOf('}') === ps[p].length - 1) {
+                                const param = ps[p].substring(1, ps[p].length - 1);
+                                pathParams[param] = parts[p];
+                            } else if (ps[p] !== parts[p]) {
+                                found = false;
+                                break;
+                            }
+                        }
+                    } else {
+                        found = false;
                     }
+                    if (found) {
+                        chosenHandler = this.router[keys[i]];
+                        break;
+                    } else {
+                        pathParams = {};
+                    }
+
                 }
             }
 
@@ -117,10 +134,10 @@ restService.RestService = class RestService {
             const data = {
                 'path': path,
                 'queryStringObject': queryStringObject,
-                'pathParam': pathParam,
+                'pathParams': pathParams,
                 'method': method,
                 'headers': headers,
-                'payload': buffer ? parseRequest(headers, method, buffer): null
+                'payload': buffer ? parseRequest(headers, method, buffer) : null
             };
 
             const handlerCallback = (response) => {
@@ -181,8 +198,6 @@ restService.RestService = class RestService {
         });
     }
 };
-
-
 
 
 // Export the module
