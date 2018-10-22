@@ -5,39 +5,19 @@
 // Dependencies
 
 const _data = require('../data');
-const cryptoService = require('../crypto-service');
+const handlerUtil = require('./handler-util');
 const Handler = require('../rest-service').Handler;
 const _responses = require('../rest-service').responses;
 
 
-// helper functions
 
-function extractNonEmptyString(value) {
-    return typeof (value) === 'string' && value.trim().length > 0 ? value.trim() : null;
-}
-
-function extractPhoneString(value) {
-    return typeof (value) === 'string' && value.trim().length === 10 ? value.trim() : null;
-}
-
-function extractBoolean(value) {
-    return typeof (value) === 'boolean' ? value : false;
-}
-
-async function phash(value) {
-    try {
-        return cryptoService.phashPromise(value);
-    } catch (ex) {
-        throw new _responses.ErrorResponse(500, ex);
-    }
-}
 
 // Define the handlers
 const handlers = {};
 
 const users = {
     GET: async (data) => {
-        const phone = extractPhoneString(data.pathParams.phone);
+        const phone = handlerUtil.extractPhoneString(data.pathParams.phone);
         if (phone) {
             try {
                 const u = await _data.promise.read('users', phone);
@@ -61,16 +41,15 @@ const users = {
      * Optional data: none
      *
      * @param data
-     * @param callback
      */
     POST: async (data) => {
         // Check that all the required fields are filled out
         const payload = data.payload;
-        const firstName = extractNonEmptyString(payload.firstName);
-        const lastName = extractNonEmptyString(payload.lastName);
-        const phone = extractPhoneString(payload.phone);
-        const password = extractNonEmptyString(payload.password);
-        const tosAgreement = extractBoolean(payload.tosAgreement);
+        const firstName = handlerUtil.extractNonEmptyString(payload.firstName);
+        const lastName = handlerUtil.extractNonEmptyString(payload.lastName);
+        const phone = handlerUtil.extractPhoneString(payload.phone);
+        const password = handlerUtil.extractNonEmptyString(payload.password);
+        const tosAgreement = handlerUtil.extractBoolean(payload.tosAgreement);
 
         if (!!firstName &&
             !!lastName &&
@@ -87,7 +66,7 @@ const users = {
                     'firstName': firstName,
                     'lastName': lastName,
                     'phone': phone,
-                    'password': await phash(password),
+                    'password': await handlerUtil.phash(password),
                     'tosAgreement': tosAgreement
                 };
 
@@ -108,12 +87,12 @@ const users = {
     },
 
     PUT: async (data) => {
-        const phone = extractPhoneString(data.pathParams.phone);
+        const phone = handlerUtil.extractPhoneString(data.pathParams.phone);
         if (phone) {
             const payload = data.payload;
-            const firstName = extractNonEmptyString(payload.firstName);
-            const lastName = extractNonEmptyString(payload.lastName);
-            const password = extractPhoneString(payload.password);
+            const firstName = handlerUtil.extractNonEmptyString(payload.firstName);
+            const lastName = handlerUtil.extractNonEmptyString(payload.lastName);
+            const password = handlerUtil.extractPhoneString(payload.password);
 
             if (!firstName && !lastName && !password) {
                 throw new _responses.ErrorResponse(400, 'Missing required field');
@@ -131,7 +110,7 @@ const users = {
                 u.lastName = lastName;
             }
             if (password) {
-                u.password = await phash(password);
+                u.password = await handlerUtil.phash(password);
             }
             await _data.promise.update('users', phone, u);
             return new _responses.SuccessResponse(200, {
@@ -143,7 +122,7 @@ const users = {
     },
 
     DELETE: async (data) => {
-        const phone = extractPhoneString(data.pathParams.phone);
+        const phone = handlerUtil.extractPhoneString(data.pathParams.phone);
         if (phone) {
             try {
                 await _data.promise.delete('users', phone);
