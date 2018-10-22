@@ -54,14 +54,19 @@ function parseRequest(headers, method, buffer) {
     return buffer;
 }
 
+const handlers = {};
+
+// Not found handler
+handlers.notFound = new Handler([], async (data) => {
+    throw new ErrorResponse(404, 'Not found');
+});
 
 // server logic
 // The server should respond to all requests with a string.
 restService.RestService = class RestService {
 
-    constructor(router, notFound) {
+    constructor(router) {
         this.router = router;
-        this.notFound = notFound;
     }
 
     respond(req, res) {
@@ -98,10 +103,10 @@ restService.RestService = class RestService {
             buffer += decoder.end();
 
             // Choose the handler this request should go to. If one is not found, use the not found handler
-            let chosenHandler = typeof(this.router[path]) !== 'undefined' ? this.router[path] : this.notFound;
+            let chosenHandler = typeof(this.router[path]) !== 'undefined' ? this.router[path] : handlers.notFound;
             let pathParams = {};
 
-            if (chosenHandler === this.notFound) {
+            if (chosenHandler === handlers.notFound) {
                 const keys = Object.keys(this.router);
                 const parts = path.split('/');
                 for (let i = 0; i < keys.length; i++) {

@@ -4,7 +4,7 @@
  **/
 
 // Dependencies
-const handlers = require('./lib/handlers');
+const users = require('./lib/handlers/users');
 const httpServer = require('./lib/http-server');
 const rest = require('./lib/rest-service');
 
@@ -14,10 +14,11 @@ const rest = require('./lib/rest-service');
 
 // Define a request router
 const router = {
-    'users': handlers.users,
-    'users/{phone}': handlers.users,
+    'users': users.users,
+    'users/{phone}': users.users,
+    //'tokens': handlers.tokens,
 };
 
 
 // Start the server
-httpServer.start((req, res) => new rest.RestService(router, handlers.notFound).respond(req, res));
+httpServer.start((req, res) => new rest.RestService(router).respond(req, res));

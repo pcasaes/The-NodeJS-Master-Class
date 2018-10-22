@@ -6,10 +6,10 @@
 const crypto = require('crypto');
 const config = require('./config');
 
-const helpers = {};
+const cryptoService = {};
 
 
-helpers.phashPromise = async (value) => {
+cryptoService.phashPromise = async (value) => {
     if (typeof(value) === 'string' && value.length > 0) {
         const salt = crypto.randomBytes(16);
         return new Promise((resolve, reject) => {
@@ -32,4 +32,4 @@ helpers.phashPromise = async (value) => {
     }
 };
 
-module.exports = helpers;
+module.exports = cryptoService;

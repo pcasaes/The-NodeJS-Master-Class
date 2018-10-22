@@ -1,13 +1,13 @@
 /**
- * There are the request handlers
+ * There are the user request handlers
  */
 
 // Dependencies
 
-const _data = require('./data');
-const helpers = require('./helpers');
-const Handler = require('./rest-service').Handler;
-const _responses = require('./rest-service').responses;
+const _data = require('../data');
+const cryptoService = require('../crypto-service');
+const Handler = require('../rest-service').Handler;
+const _responses = require('../rest-service').responses;
 
 
 // helper functions
@@ -26,7 +26,7 @@ function extractBoolean(value) {
 
 async function phash(value) {
     try {
-        return helpers.phashPromise(value);
+        return cryptoService.phashPromise(value);
     } catch (ex) {
         throw new _responses.ErrorResponse(500, ex);
     }
@@ -165,9 +165,6 @@ handlers.users = new Handler(Object.keys(users), async (data) => {
     return users[data.method](data);
 });
 
-// Not found handler
-handlers.notFound = new Handler([], async (data) => {
-    throw new _responses.ErrorResponse(404, 'Not found');
-});
+
 
 module.exports = handlers;
