@@ -5,6 +5,7 @@
 
 // Dependencies
 const users = require('./lib/handlers/users');
+const authentication = require('./lib/handlers/authentication');
 const httpServer = require('./lib/http-server');
 const rest = require('./lib/rest-service');
 
@@ -16,7 +17,8 @@ const rest = require('./lib/rest-service');
 const router = {
     'users': users.users,
     'users/{phone}': users.users,
-    //'tokens': handlers.tokens,
+    'tokens': authentication.tokens,
+    'tokens/{id}': authentication.tokens,
 };
 
 

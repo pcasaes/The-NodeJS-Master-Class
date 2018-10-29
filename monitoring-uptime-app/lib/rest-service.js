@@ -5,6 +5,7 @@
  */
 const StringDecoder = require('string_decoder').StringDecoder;
 const url = require('url');
+const tokenService = require('./services/token-service');
 
 const restService = {};
 
@@ -69,6 +70,109 @@ restService.RestService = class RestService {
         this.router = router;
     }
 
+    async end(buffer,
+              path,
+              queryStringObject,
+              headers,
+              method,
+              res,
+              requestTime) {
+        // Choose the handler this request should go to. If one is not found, use the not found handler
+        let chosenHandler = typeof(this.router[path]) !== 'undefined' ? this.router[path] : handlers.notFound;
+        let pathParams = {};
+
+        if (chosenHandler === handlers.notFound) {
+            const keys = Object.keys(this.router);
+            const parts = path.split('/');
+            for (let i = 0; i < keys.length; i++) {
+                const ps = keys[i].split('/');
+                let found = ps.length > 0;
+                if (ps.length === parts.length) {
+                    for (let p = 0; p < parts.length; p++) {
+                        if (ps[p].indexOf('{') === 0 && ps[p].indexOf('}') === ps[p].length - 1) {
+                            const param = ps[p].substring(1, ps[p].length - 1);
+                            pathParams[param] = parts[p];
+                        } else if (ps[p] !== parts[p]) {
+                            found = false;
+                            break;
+                        }
+                    }
+                } else {
+                    found = false;
+                }
+                if (found) {
+                    chosenHandler = this.router[keys[i]];
+                    break;
+                } else {
+                    pathParams = {};
+                }
+
+            }
+        }
+
+        const auth = headers['authorization'];
+        let tokenId = null;
+        if (!!auth && auth.startsWith('Bearer ')) {
+            tokenId = auth.substr(7);
+        }
+
+        // Construct the data object to send to the handler
+        const data = {
+            'path': path,
+            'queryStringObject': queryStringObject,
+            'pathParams': pathParams,
+            'method': method,
+            'headers': headers,
+            'payload': buffer ? parseRequest(headers, method, buffer) : null,
+            'token': tokenId ? await tokenService.isAuthorized(tokenId) : null,
+        };
+
+        const handlerCallback = (response) => {
+            let statusCode = response.status;
+            let responsePayload = response.payload;
+            res.setHeader('Content-Type', 'application/json');
+
+            // Use the status code called back by the handler, or default to 200
+            statusCode = typeof(statusCode) === 'number' ? statusCode : 200;
+
+            // Use the payload called back by the handler. or default to an empty object
+            responsePayload = typeof(responsePayload) === 'object' ? responsePayload : {};
+
+            // Convert the payload to a string
+            const payloadString = JSON.stringify(responsePayload);
+
+            // Return the response
+            res.writeHead(statusCode);
+            res.end(payloadString);
+
+            // Log the request
+            console.log(`${requestTime.toISOString()} Request received: ${data.method} ${data.path}; Response: ${statusCode}, Payload:`, payloadString);
+
+
+        };
+
+        console.log(chosenHandler.methods);
+        console.log(chosenHandler.methods.indexOf(data.method));
+        if (chosenHandler.methods &&
+            chosenHandler.methods.length &&
+            chosenHandler.methods.indexOf(data.method) < 0) {
+            handlerCallback(new RestResponse(406, {'error': `${data.method} is not supported`}));
+        } else {
+
+            // Router the request to the handler specified in the router
+            try {
+                handlerCallback(await chosenHandler.service(data));
+            } catch (ex) {
+                console.error(ex);
+                if (ex instanceof ErrorResponse) {
+                    handlerCallback(new RestResponse(ex.status, {'error': `${ex.message}`}));
+                } else {
+                    handlerCallback(new RestResponse(500, {'error': `${ex}`}));
+                }
+            }
+        }
+    }
+
     respond(req, res) {
         // Get request time
         const requestTime = new Date();
@@ -102,103 +206,23 @@ restService.RestService = class RestService {
         req.on('end', () => {
             buffer += decoder.end();
 
-            // Choose the handler this request should go to. If one is not found, use the not found handler
-            let chosenHandler = typeof(this.router[path]) !== 'undefined' ? this.router[path] : handlers.notFound;
-            let pathParams = {};
-
-            if (chosenHandler === handlers.notFound) {
-                const keys = Object.keys(this.router);
-                const parts = path.split('/');
-                for (let i = 0; i < keys.length; i++) {
-                    const ps = keys[i].split('/');
-                    let found = ps.length > 0;
-                    if (ps.length === parts.length) {
-                        for (let p = 0; p < parts.length; p++) {
-                            if (ps[p].indexOf('{') === 0 && ps[p].indexOf('}') === ps[p].length - 1) {
-                                const param = ps[p].substring(1, ps[p].length - 1);
-                                pathParams[param] = parts[p];
-                            } else if (ps[p] !== parts[p]) {
-                                found = false;
-                                break;
-                            }
-                        }
-                    } else {
-                        found = false;
-                    }
-                    if (found) {
-                        chosenHandler = this.router[keys[i]];
-                        break;
-                    } else {
-                        pathParams = {};
-                    }
-
-                }
-            }
-
-            // Construct the data object to send to the handler
-            const data = {
-                'path': path,
-                'queryStringObject': queryStringObject,
-                'pathParams': pathParams,
-                'method': method,
-                'headers': headers,
-                'payload': buffer ? parseRequest(headers, method, buffer) : null
-            };
-
-            const handlerCallback = (response) => {
-                let statusCode = response.status;
-                let responsePayload = response.payload;
-                res.setHeader('Content-Type', 'application/json');
-
-                // Use the status code called back by the handler, or default to 200
-                statusCode = typeof(statusCode) === 'number' ? statusCode : 200;
-
-                // Use the payload called back by the handler. or default to an empty object
-                responsePayload = typeof(responsePayload) === 'object' ? responsePayload : {};
-
-                // Convert the payload to a string
-                const payloadString = JSON.stringify(responsePayload);
-
-                // Return the response
-                res.writeHead(statusCode);
-                res.end(payloadString);
-
-                // Log the request
-                console.log(`${requestTime.toISOString()} Request received: ${data.method} ${data.path}; Response: ${statusCode}, Payload:`, payloadString);
-
-
-            };
-
-            console.log(chosenHandler.methods);
-            console.log(chosenHandler.methods.indexOf(data.method));
-            if (chosenHandler.methods &&
-                chosenHandler.methods.length &&
-                chosenHandler.methods.indexOf(data.method) < 0) {
-                handlerCallback(new RestResponse(406, {'error': `${data.method} is not supported`}));
-            } else {
-
-                // Router the request to the handler specified in the router
-                try {
-                    chosenHandler.service(data)
-                        .then(handlerCallback)
-                        .catch(ex => {
-                            console.error(ex);
-                            if (ex instanceof ErrorResponse) {
-                                handlerCallback(new RestResponse(ex.status, {'error': `${ex.message}`}));
-                            } else {
-                                handlerCallback(new RestResponse(500, {'error': `${ex}`}));
-                            }
-                        });
-                } catch (ex) {
+            this.end(buffer,
+                path,
+                queryStringObject,
+                headers,
+                method,
+                res,
+                requestTime)
+                .then(() => {
+                })
+                .catch(ex => {
                     console.error(ex);
                     if (ex instanceof ErrorResponse) {
                         handlerCallback(new RestResponse(ex.status, {'error': `${ex.message}`}));
                     } else {
                         handlerCallback(new RestResponse(500, {'error': `${ex}`}));
                     }
-                }
-            }
-
+                });
 
         });
     }

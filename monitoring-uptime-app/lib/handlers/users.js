@@ -11,6 +11,14 @@ const _responses = require('../rest-service').responses;
 
 
 
+function checkAuthorizedUser(phone, token) {
+    if (!token) {
+        throw new _responses.ErrorResponse(401, 'Not authorized');
+    }
+    if (token.phone !== phone) {
+        throw new _responses.ErrorResponse(403, 'Forbidden');
+    }
+}
 
 // Define the handlers
 const handlers = {};
@@ -19,6 +27,7 @@ const users = {
     GET: async (data) => {
         const phone = handlerUtil.extractPhoneString(data.pathParams.phone);
         if (phone) {
+            checkAuthorizedUser(phone, data.token);
             try {
                 const u = await _data.promise.read('users', phone);
                 return new _responses.SuccessResponse(200, {
@@ -89,6 +98,8 @@ const users = {
     PUT: async (data) => {
         const phone = handlerUtil.extractPhoneString(data.pathParams.phone);
         if (phone) {
+            checkAuthorizedUser(phone, data.token);
+
             const payload = data.payload;
             const firstName = handlerUtil.extractNonEmptyString(payload.firstName);
             const lastName = handlerUtil.extractNonEmptyString(payload.lastName);
@@ -124,6 +135,8 @@ const users = {
     DELETE: async (data) => {
         const phone = handlerUtil.extractPhoneString(data.pathParams.phone);
         if (phone) {
+            checkAuthorizedUser(phone, data.token);
+
             try {
                 await _data.promise.delete('users', phone);
                 return new _responses.SuccessResponse(200, {
